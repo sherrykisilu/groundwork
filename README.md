@@ -175,6 +175,9 @@ evals/
 docs/ENGAGEMENT.md           how to take this to a new domain in a day
 ```
 
+The product thinking behind all of this, including the decisions and what they cost, is
+in [product/](product/).
+
 ## What this is and is not
 
 It is a demonstration of a delivery pattern, with enough real machinery that you could
