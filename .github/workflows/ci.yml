@@ -1,0 +1,44 @@
+name: ci
+
+# Everything here runs with no secrets. The eval suites use the replay provider, which
+# replays recorded model turns but still executes tool calls against the real MCP
+# servers, so a broken server or fixture still fails the build.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Format check
+        run: ruff format --check .
+
+      - name: Tests
+        run: pytest -q
+
+      - name: Eval suite, adf_ops
+        run: groundwork run-eval evals/adf_ops.yaml --provider replay
+
+      - name: Eval suite, ke_compliance
+        run: groundwork run-eval evals/ke_compliance.yaml --provider replay
