@@ -1,0 +1,31 @@
+{
+  "case_id": "profile_applicability",
+  "model": "claude-sonnet-4-5-20250929",
+  "note": "Hand authored recording. Only the model turns are replayed; every tool call below executes for real against the ke_compliance server.",
+  "turns": [
+    {
+      "text": "Thresholds are rules, not recall, so I will let the tool compute this rather than estimate it.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "check_applicability_for_profile",
+          "arguments": {
+            "profile": {
+              "employees": 4,
+              "annual_turnover_kes": 3200000,
+              "sector": "food",
+              "handles_personal_data": true,
+              "has_physical_premises": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "text": "Ten obligations apply on this corpus. Grouped by what drives them.\n\nBecause you are a registered business: file an annual income tax return by 30 June (DOC-TAX-01#S1).\n\nBecause turnover of 3,200,000 sits between the 1,000,000 floor and the VAT threshold: turnover tax, monthly, by the 20th of the following month (DOC-TAX-01#S3). Note what this means in the other direction. You are below the VAT threshold on these figures, so VAT registration is not triggered yet (DOC-TAX-01#S2). Worth watching, because it is a turnover test and it moves with you.\n\nBecause you have 4 employees: PAYE (DOC-PAY-01#S1), health contributions (DOC-PAY-01#S2), pension contributions (DOC-PAY-01#S3) and the housing levy (DOC-PAY-01#S4). Four separate filings, all due by the 9th of the following month (DOC-PAY-01#S5). Also written contracts and employment records (DOC-EMP-01#S1, DOC-EMP-01#S2).\n\nBecause you handle personal data: the controller duties, including answering a data subject request within 30 days (DOC-DPA-01#S3, DOC-DPA-01#S4). Registration itself is not triggered at 4 employees and this turnover (DOC-DPA-01#S1), but the duties do not depend on registration.\n\nBecause you trade from premises in the food sector: the single business permit, renewed annually by 31 March (DOC-PERMIT-01#S1, DOC-PERMIT-01#S2), plus the food hygiene licence and food handler certificates (DOC-PERMIT-01#S3, DOC-SECTOR-01#S1). The certificates run on a 6 month cycle, which is the one here that is easiest to let lapse.\n\nThis corpus is synthetic, written for a software demonstration, so this is a worked example and not legal advice.",
+      "stop_reason": "end_turn",
+      "tool_calls": []
+    }
+  ]
+}

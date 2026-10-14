@@ -1,0 +1,160 @@
+name: adf_ops
+description: >
+  Root cause triage over a synthetic Azure Data Factory estate. The cases are built
+  around one night where a single throttled copy activity caused three downstream
+  failures with misleading symptoms, plus one genuinely unrelated failure in the same
+  window. Every case is really asking the same question: did the agent walk the
+  dependency graph, or did it believe the first error it read.
+
+skill: adf-triage
+
+servers:
+  - name: adf_ops
+    command: "{python}"
+    args: ["-m", "groundwork.servers.adf_ops"]
+
+system_preamble: >
+  You are triaging a synthetic Azure Data Factory estate through the adf_ops tools.
+  The factory name is contoso-analytics-adf. Today is 2026-03-12.
+
+cases:
+  - id: root_cause_cascade
+    description: >
+      The headline case. Three pipelines failed with three different error codes, two of
+      which point at the wrong system entirely. The only acceptable answer names
+      ingest_sales_raw and the throttling error, and explains the rest as consequences.
+    prompt: >
+      The sales dashboard did not refresh last night and the publish pipeline is red
+      with a SQL error about a missing table. Work out what actually broke and tell me
+      what to do about it.
+    scorers:
+      - type: tool_sequence
+        tools: [summarize_failures, find_upstream_dependencies, get_activity_error]
+      - type: tool_called
+        tool: find_upstream_dependencies
+        args:
+          pipeline: publish_sales_dashboard
+      - type: contains
+        mode: all
+        values:
+          - ingest_sales_raw
+          - CopySalesFromRestApi
+          - RestSourceCallFailed
+      - type: contains
+        values: ["429", "throttl"]
+      - type: not_contains
+        values:
+          - ingest_marketing_events
+          - UserErrorInvalidCredential
+      - type: no_tool_errors
+      - type: max_tool_calls
+        value: 8
+      - type: judge
+        rubric: >
+          The answer must identify ingest_sales_raw, activity CopySalesFromRestApi, and
+          the RestSourceCallFailed / HTTP 429 throttling error as the single root cause.
+          It must explain the SQL error in publish_sales_dashboard as a downstream
+          consequence rather than a separate problem, and it must recommend a concrete
+          next action. It fails if it treats the SQL error or the data flow error as the
+          cause, or if it recommends work on the SQL or storage layer.
+
+  - id: separate_incidents
+    description: >
+      Six runs failed in one window but they are two incidents, not one. An agent that
+      pattern matches on "they all failed at the same time" gets this wrong.
+    prompt: >
+      Six pipeline runs failed overnight. Is this one incident or more than one? Give me
+      the root cause of each, and say which failures belong to which.
+    scorers:
+      - type: tool_called
+        tool: summarize_failures
+      - type: tool_called
+        tool: find_upstream_dependencies
+        min_times: 2
+      - type: contains
+        mode: all
+        values:
+          - ingest_sales_raw
+          - ingest_marketing_events
+          - RestSourceCallFailed
+          - UserErrorInvalidCredential
+      - type: regex
+        pattern: "two (separate |distinct |independent )?incidents"
+      - type: no_tool_errors
+      - type: max_tool_calls
+        value: 10
+
+  - id: already_recovered
+    description: >
+      The root cause pipeline was rerun successfully this morning. The right answer is
+      "rerun the downstream pipelines", not "page the vendor". Checking for recovery is
+      step 6 of the skill and it is the step most likely to be skipped.
+    prompt: >
+      Should I page the vendor integration team about the sales ingestion failure from
+      2026-03-11, or has it already cleared?
+    scorers:
+      - type: tool_called
+        tool: list_pipeline_runs
+        args:
+          pipeline: ingest_sales_raw
+      - type: contains
+        values: ["2026-03-12", "07:30"]
+      - type: contains
+        mode: all
+        values:
+          - Succeeded
+          - rerun
+      - type: not_contains
+        values: ["page the vendor", "escalate to the vendor"]
+      - type: no_tool_errors
+      - type: max_turns
+        value: 6
+
+  - id: skipped_is_not_cause
+    description: >
+      A Skipped activity is a consequence of something earlier in the same pipeline.
+      An agent that reports a skipped activity as the failure has misread the run.
+    prompt: >
+      In run 3f1a9c20-0e51-4a1b-0311-7c1f2d0a0002, which activity actually failed, and
+      why did the others not run?
+    scorers:
+      - type: tool_called
+        tool: get_run_activities
+        args:
+          run_id: 3f1a9c20-0e51-4a1b-0311-7c1f2d0a0002
+      - type: contains
+        mode: all
+        values:
+          - MergeSalesDelta
+          - Skipped
+      - type: not_contains
+        values:
+          - "RefreshSalesStats failed"
+          - "TriggerSalesPublish failed"
+      - type: max_tool_calls
+        value: 4
+
+  - id: tool_error_recovery
+    description: >
+      The prompt uses a pipeline name that does not exist, so the agent's first call
+      fails. A usable agent reads the error, lists the real names, and carries on. This
+      case exists because on a real engagement the tool layer is the thing that breaks.
+    prompt: >
+      Why did the sales_ingest_pipeline job fail on 2026-03-11? Look it up and tell me
+      the root cause.
+    scorers:
+      - type: tool_called
+        tool: get_pipeline
+        args:
+          name: sales_ingest_pipeline
+      - type: tool_called
+        tool: list_pipelines
+      - type: contains
+        mode: all
+        values:
+          - ingest_sales_raw
+          - RestSourceCallFailed
+      - type: no_tool_errors
+        allow: 1
+      - type: max_tool_calls
+        value: 8

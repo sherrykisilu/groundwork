@@ -1,0 +1,65 @@
+{
+  "case_id": "tool_error_recovery",
+  "model": "claude-sonnet-4-5-20250929",
+  "note": "Hand authored recording. The first tool call deliberately uses a pipeline name that does not exist, so the adf_ops server returns a tool error and the agent has to recover. The error is produced live, not replayed.",
+  "turns": [
+    {
+      "text": "",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "get_pipeline",
+          "arguments": {"factory": "contoso-analytics-adf", "name": "sales_ingest_pipeline"}
+        }
+      ]
+    },
+    {
+      "text": "That name does not exist in this factory, so I was guessing. Listing the real pipeline names instead of trying another variation.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "name": "list_pipelines",
+          "arguments": {"factory": "contoso-analytics-adf"}
+        }
+      ]
+    },
+    {
+      "text": "The pipeline you mean is ingest_sales_raw. Looking at its runs on 2026-03-11.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_3",
+          "name": "list_pipeline_runs",
+          "arguments": {
+            "factory": "contoso-analytics-adf",
+            "pipeline": "ingest_sales_raw",
+            "status": "Failed",
+            "since": "3d"
+          }
+        }
+      ]
+    },
+    {
+      "text": "",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_4",
+          "name": "get_activity_error",
+          "arguments": {
+            "factory": "contoso-analytics-adf",
+            "run_id": "3f1a9c20-0e51-4a1b-0311-7c1f2d0a0001",
+            "activity": "CopySalesFromRestApi"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Small correction first: there is no pipeline called sales_ingest_pipeline in contoso-analytics-adf. The one you mean is ingest_sales_raw.\n\nIt failed on 2026-03-11T01:00Z, run id 3f1a9c20-0e51-4a1b-0311-7c1f2d0a0001, invoked by the nightly_sales_trigger. The failing activity is the copy activity CopySalesFromRestApi, and the error is ErrorCode=RestSourceCallFailed: the vendor POS API at api.vendor-pos.example returned HTTP 429 with retry_after_seconds 900 and the message that the tenant request quota for the 00:00 to 02:00 UTC window was exhausted. The copy retried four times over thirty minutes and then exhausted its retry policy.\n\nSo this is throttling on the vendor side, not a credential or schema problem. The two activities after it in the same pipeline were skipped, which is expected.",
+      "stop_reason": "end_turn",
+      "tool_calls": []
+    }
+  ]
+}

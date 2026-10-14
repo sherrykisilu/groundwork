@@ -1,0 +1,27 @@
+{
+  "case_id": "already_recovered",
+  "model": "claude-sonnet-4-5-20250929",
+  "note": "Hand authored recording. Only the model turns are replayed; every tool call below executes for real against the adf_ops server.",
+  "turns": [
+    {
+      "text": "Before recommending an escalation I should check whether the pipeline has run successfully since the failure.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "list_pipeline_runs",
+          "arguments": {
+            "factory": "contoso-analytics-adf",
+            "pipeline": "ingest_sales_raw",
+            "since": "3d"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Do not page them. The failure has already cleared.\n\nThe failed run 3f1a9c20-0e51-4a1b-0311-7c1f2d0a0001 started 2026-03-11T01:00Z under the nightly_sales_trigger. A manual rerun, run id 3f1a9c20-0e51-4a1b-0312-7c1f2d0a0001, started 2026-03-12 at 07:30Z and finished Succeeded in about 22 minutes, with the note that it was a rerun after the vendor API quota window reset. That confirms the HTTP 429 was a transient quota problem rather than a broken integration, and there is nothing for the vendor team to fix right now.\n\nWhat is still outstanding is downstream. The sales data for 2026-03-11 only landed this morning, so transform_sales_clean and publish_sales_dashboard still need to be rerun before the dashboard is correct. Worth raising separately, not as a page: the nightly trigger fires inside the vendor's 00:00 to 02:00 UTC quota window, so this will recur. Moving the trigger or honouring retry_after_seconds is the durable fix.",
+      "stop_reason": "end_turn",
+      "tool_calls": []
+    }
+  ]
+}

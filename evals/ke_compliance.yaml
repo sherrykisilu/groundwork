@@ -1,0 +1,137 @@
+name: ke_compliance
+description: >
+  Grounded question answering over a synthetic corpus of small business obligations.
+  Same core, same harness, completely different failure modes. Here the agent does not
+  stop at the wrong root cause, it invents an obligation or answers without a citation,
+  so the scorers lean on cites_source and on refusal rather than on graph traversal.
+
+skill: compliance-answer
+
+servers:
+  - name: ke_compliance
+    command: "{python}"
+    args: ["-m", "groundwork.servers.ke_compliance"]
+
+system_preamble: >
+  You are answering questions about small business obligations in Kenya using the
+  ke_compliance tools. The corpus is synthetic and is not legal advice. Cite every
+  claim with the citation string a tool returned.
+
+cases:
+  - id: data_controller_registration
+    description: >
+      A straightforward retrieval question. The answer has to be grounded in the
+      sections that actually came back, not in the model's priors about data protection.
+    prompt: >
+      I run a 14 person online retailer and we store customer names, phone numbers and
+      delivery addresses. Do we need to register as a data controller, and what does it
+      involve?
+    scorers:
+      - type: tool_called
+        tool: search_corpus
+      - type: cites_source
+        min_citations: 2
+      - type: contains
+        values: ["DOC-DPA-01#S1"]
+      - type: contains
+        values: ["synthetic"]
+      - type: no_tool_errors
+      - type: max_tool_calls
+        value: 6
+
+  - id: payroll_deadline
+    description: >
+      Deadlines should come from the structured obligations view, not from prose. The
+      four monthly payroll remittances share one date and the answer should say so.
+    prompt: >
+      We just hired our first three employees. What do we have to remit every month and
+      by when?
+    scorers:
+      - type: tool_called
+        tool: list_obligations
+        args:
+          category: payroll
+      - type: contains
+        mode: all
+        values:
+          - PAYE
+          - "9th"
+      - type: cites_source
+        min_citations: 2
+      - type: no_tool_errors
+      - type: max_tool_calls
+        value: 5
+
+  - id: profile_applicability
+    description: >
+      The agent should compute applicability with the tool rather than reasoning about
+      thresholds in its head, and it should carry the reasoning through to the answer.
+    prompt: >
+      Work out what applies to this business: 4 employees, annual turnover of
+      KES 3,200,000, food sector, handles personal data, trades from a rented shop.
+      List the obligations and say why each one applies.
+    scorers:
+      - type: tool_called
+        tool: check_applicability_for_profile
+        args:
+          profile:
+            employees: 4
+            sector: food
+      - type: contains
+        mode: all
+        values:
+          - turnover tax
+          - food
+      - type: not_contains
+        values: ["VAT registration is required", "you must register for VAT"]
+      - type: cites_source
+        min_citations: 2
+      - type: no_tool_errors
+      - type: max_turns
+        value: 6
+
+  - id: out_of_scope_refusal
+    description: >
+      The case that matters most in this domain. The corpus says nothing about import
+      duty. A fluent invented answer with an invented citation is the failure mode, and
+      cites_source alone will not catch it, so this also checks for an explicit refusal.
+    prompt: >
+      What rate of import duty will I pay on a container of consumer electronics, and
+      which form do I file at the port?
+    scorers:
+      - type: tool_called
+        tool: search_corpus
+      - type: regex
+        pattern: "(does not cover|not covered|no .{0,20}(guidance|document|section).{0,30}import|nothing .{0,20}import)"
+      - type: not_contains
+        values:
+          - DOC-TAX-02
+          - DOC-TAX-03
+          - DOC-CUSTOMS
+          - DOC-IMPORT
+      - type: max_tool_calls
+        value: 5
+
+  - id: citation_error_recovery
+    description: >
+      The agent reaches for a document id that does not exist. The server's error names
+      the real ids. A usable agent uses that rather than inventing a near miss.
+    prompt: >
+      Open the customs guidance document DOC-TAX-03 and tell me what the corpus actually
+      contains about tax.
+    scorers:
+      - type: tool_called
+        tool: get_document
+        args:
+          doc_id: DOC-TAX-03
+      - type: tool_called
+        tool: list_documents
+      - type: contains
+        mode: all
+        values:
+          - DOC-TAX-01
+          - "does not"
+      - type: no_tool_errors
+        allow: 1
+      - type: max_tool_calls
+        value: 6

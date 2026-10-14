@@ -1,0 +1,41 @@
+{
+  "case_id": "skipped_is_not_cause",
+  "model": "claude-sonnet-4-5-20250929",
+  "note": "Hand authored recording. Only the model turns are replayed; every tool call below executes for real against the adf_ops server.",
+  "turns": [
+    {
+      "text": "",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "get_run_activities",
+          "arguments": {
+            "factory": "contoso-analytics-adf",
+            "run_id": "3f1a9c20-0e51-4a1b-0311-7c1f2d0a0002"
+          }
+        }
+      ]
+    },
+    {
+      "text": "One activity failed: MergeSalesDelta, a data flow activity, with ErrorCode=DFExecutorUserError.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "name": "get_activity_error",
+          "arguments": {
+            "factory": "contoso-analytics-adf",
+            "run_id": "3f1a9c20-0e51-4a1b-0311-7c1f2d0a0002",
+            "activity": "MergeSalesDelta"
+          }
+        }
+      ]
+    },
+    {
+      "text": "MergeSalesDelta is the only activity that failed in that run. It is a DataFlow activity and it failed with ErrorCode=DFExecutorUserError because the source path it reads did not exist.\n\nThe other three activities, RefreshSalesStats, TriggerSalesPublish and TriggerDataQuality, are all Skipped rather than failed. In Data Factory a Skipped status means the activity's dependsOn condition was never satisfied, because MergeSalesDelta did not succeed. They recorded zero duration and no error code. None of them is a problem in its own right, and chasing them would be wasted effort.\n\nWorth noting that MergeSalesDelta is itself a symptom: the path it was looking for is missing because the upstream ingest did not write it.",
+      "stop_reason": "end_turn",
+      "tool_calls": []
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "case_id": "root_cause_cascade",
+  "model": "claude-sonnet-4-5-20250929",
+  "note": "Hand authored recording. Only the model turns are replayed; every tool call below executes for real against the adf_ops server.",
+  "turns": [
+    {
+      "text": "Before I look at the publish pipeline I want the shape of the whole window, because a SQL error about a missing table is usually a symptom of something that did not write the table.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "summarize_failures",
+          "arguments": {"factory": "contoso-analytics-adf", "since": "3d"}
+        }
+      ]
+    },
+    {
+      "text": "Six failures, six different error codes. Grouping by code is not grouping by cause, so I will walk upstream from the pipeline that was reported.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "name": "find_upstream_dependencies",
+          "arguments": {"factory": "contoso-analytics-adf", "pipeline": "publish_sales_dashboard"}
+        }
+      ]
+    },
+    {
+      "text": "publish_sales_dashboard sits two hops below ingest_sales_raw, which is a root with nothing upstream of it and which also failed. That is my candidate.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_3",
+          "name": "get_run_activities",
+          "arguments": {"factory": "contoso-analytics-adf", "run_id": "3f1a9c20-0e51-4a1b-0311-7c1f2d0a0001"}
+        }
+      ]
+    },
+    {
+      "text": "CopySalesFromRestApi failed and the two activities after it were skipped. Reading the full error payload now.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_4",
+          "name": "get_activity_error",
+          "arguments": {
+            "factory": "contoso-analytics-adf",
+            "run_id": "3f1a9c20-0e51-4a1b-0311-7c1f2d0a0001",
+            "activity": "CopySalesFromRestApi"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Root cause: the pipeline ingest_sales_raw failed at 2026-03-11T01:00Z in its copy activity CopySalesFromRestApi, with ErrorCode=RestSourceCallFailed. The vendor POS API returned HTTP 429 with retry_after_seconds 900, saying the tenant request quota for the 00:00 to 02:00 UTC window was exhausted. The copy retried four times over thirty minutes and gave up.\n\nNothing was written to ds_sales_landing, so everything downstream failed describing its own missing input rather than the real problem. transform_sales_clean failed in MergeSalesDelta with DFExecutorUserError, path does not exist. publish_sales_dashboard then failed in LoadDashboardMart with SqlOperationFailed, invalid object name curated.sales_daily_2026_03_11, which is the missing table error you were shown. There is no schema deployment problem and no storage problem: both of those pipelines did exactly what they should have done given an empty input.\n\nWhat to do. The throttling is transient and the quota window has long since reset, so this does not need a code change. Rerun ingest_sales_raw first, confirm ds_sales_landing has the 2026-03-11 partition, then rerun transform_sales_clean and publish_sales_dashboard in that order. The durable fix is to move the nightly trigger outside the 00:00 to 02:00 UTC quota window, or to honour retry_after_seconds rather than using a fixed four retry policy.",
+      "stop_reason": "end_turn",
+      "tool_calls": []
+    }
+  ]
+}

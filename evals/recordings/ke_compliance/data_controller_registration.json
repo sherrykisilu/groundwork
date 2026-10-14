@@ -1,0 +1,44 @@
+{
+  "case_id": "data_controller_registration",
+  "model": "claude-sonnet-4-5-20250929",
+  "note": "Hand authored recording. Only the model turns are replayed; every tool call below executes for real against the ke_compliance server.",
+  "turns": [
+    {
+      "text": "",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "search_corpus",
+          "arguments": {"query": "register as a data controller threshold employees", "top_k": 5}
+        }
+      ]
+    },
+    {
+      "text": "I have the registration sections. Pulling the full text of the two that decide this.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "name": "get_section",
+          "arguments": {"doc_id": "DOC-DPA-01", "section_id": "S1"}
+        },
+        {
+          "id": "call_3",
+          "name": "get_section",
+          "arguments": {"doc_id": "DOC-DPA-01", "section_id": "S2"}
+        },
+        {
+          "id": "call_4",
+          "name": "get_section",
+          "arguments": {"doc_id": "DOC-DPA-01", "section_id": "S4"}
+        }
+      ]
+    },
+    {
+      "text": "Yes, on this corpus you would need to register.\n\nRegistration is triggered by any one of three things, and you meet at least two of them: more than ten employees, turnover above the illustrative threshold, or processing personal data as a core part of what you do (DOC-DPA-01#S1). You have 14 employees, and holding customer names, phone numbers and delivery addresses in order to fulfil orders is core processing rather than incidental.\n\nWhat it involves: you register as a data controller with the commissioner's office, the certificate runs for 24 months, and you renew it rather than registering again (DOC-DPA-01#S2). Registration is a filing, not an approval, so there is nothing to wait for before you continue trading.\n\nSeparately from registration, the controller duties apply to you anyway: keeping a record of what you process and why, answering a data subject request within 30 days, and reporting a personal data breach (DOC-DPA-01#S3, DOC-DPA-01#S4). Those are not conditional on being registered.\n\nOne thing to be clear about: this corpus is synthetic, written for a software demonstration, so treat the above as a worked example rather than legal advice.",
+      "stop_reason": "end_turn",
+      "tool_calls": []
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "case_id": "citation_error_recovery",
+  "model": "claude-sonnet-4-5-20250929",
+  "note": "The first tool call fails on purpose. DOC-TAX-03 does not exist. The server's error names the real document ids and the agent is expected to use them rather than guess a near miss.",
+  "turns": [
+    {
+      "text": "",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "get_document",
+          "arguments": {"doc_id": "DOC-TAX-03"}
+        }
+      ]
+    },
+    {
+      "text": "That id does not exist. Listing what is actually there rather than guessing a neighbouring id.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "name": "list_documents",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "text": "",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_3",
+          "name": "get_document",
+          "arguments": {"doc_id": "DOC-TAX-01"}
+        }
+      ]
+    },
+    {
+      "text": "There is no DOC-TAX-03. The corpus has one tax document, DOC-TAX-01, and I read it rather than guess at a near miss id.\n\nIt covers four things. The annual income tax return, due 30 June, which every registered business files even in a year with no income (DOC-TAX-01#S1). VAT registration, which is triggered by a turnover threshold rather than by sector (DOC-TAX-01#S2). Turnover tax, which is the monthly regime for businesses below that threshold and above the floor, due by the 20th (DOC-TAX-01#S3). And what happens when you file late (DOC-TAX-01#S4).\n\nWhat it does not cover: customs and import duty, excise, anything on international transactions, and anything about appeals or disputes. If your question was about duty at the port, that is outside this corpus and I would be making it up.\n\nThe corpus is synthetic, written for a software demonstration, so it is not legal advice.",
+      "stop_reason": "end_turn",
+      "tool_calls": []
+    }
+  ]
+}

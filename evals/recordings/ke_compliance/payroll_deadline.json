@@ -1,0 +1,39 @@
+{
+  "case_id": "payroll_deadline",
+  "model": "claude-sonnet-4-5-20250929",
+  "note": "Hand authored recording. Only the model turns are replayed; every tool call below executes for real against the ke_compliance server.",
+  "turns": [
+    {
+      "text": "Deadlines are better taken from the structured obligations than from prose, so I will start there.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "list_obligations",
+          "arguments": {"category": "payroll"}
+        }
+      ]
+    },
+    {
+      "text": "Four separate remittances, one shared date. Confirming the date section, and checking what else a first hire brings with it.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "name": "get_section",
+          "arguments": {"doc_id": "DOC-PAY-01", "section_id": "S5"}
+        },
+        {
+          "id": "call_3",
+          "name": "list_obligations",
+          "arguments": {"category": "employment"}
+        }
+      ]
+    },
+    {
+      "text": "Four monthly remittances, all due on the same day.\n\nPAYE deducted from each salary (DOC-PAY-01#S1). Statutory health insurance contributions (DOC-PAY-01#S2). Statutory pension contributions (DOC-PAY-01#S3). The housing levy (DOC-PAY-01#S4).\n\nAll four are due by the 9th of the following month, so March payroll is remitted by 9 April (DOC-PAY-01#S5). They are four separate filings to different bodies even though they share a date, which is the part that usually catches people out in the first couple of months.\n\nOne thing that comes with hiring and is not a payroll remittance: you need written contracts, within 3 months of engagement, and employment records kept alongside them (DOC-EMP-01#S1, DOC-EMP-01#S2).\n\nThis corpus is synthetic and written for a software demonstration, so it is not legal advice.",
+      "stop_reason": "end_turn",
+      "tool_calls": []
+    }
+  ]
+}

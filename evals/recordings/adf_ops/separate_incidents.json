@@ -1,0 +1,74 @@
+{
+  "case_id": "separate_incidents",
+  "model": "claude-sonnet-4-5-20250929",
+  "note": "Hand authored recording. Only the model turns are replayed; every tool call below executes for real against the adf_ops server.",
+  "turns": [
+    {
+      "text": "Starting with the aggregate so I can see whether these failures share a dependency path.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "summarize_failures",
+          "arguments": {"factory": "contoso-analytics-adf", "since": "3d"}
+        }
+      ]
+    },
+    {
+      "text": "Five of the six are in the sales and customer family. Checking what sits above the deepest one.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "name": "find_upstream_dependencies",
+          "arguments": {"factory": "contoso-analytics-adf", "pipeline": "publish_sales_dashboard"}
+        },
+        {
+          "id": "call_3",
+          "name": "find_upstream_dependencies",
+          "arguments": {"factory": "contoso-analytics-adf", "pipeline": "transform_customer_360"}
+        }
+      ]
+    },
+    {
+      "text": "Both trace back to ingest_sales_raw. Now checking whether the marketing failure connects to the same root.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_4",
+          "name": "find_upstream_dependencies",
+          "arguments": {"factory": "contoso-analytics-adf", "pipeline": "ingest_marketing_events"}
+        }
+      ]
+    },
+    {
+      "text": "No upstream at all, so it cannot be a consequence of the sales failure. Reading its error.",
+      "stop_reason": "tool_use",
+      "tool_calls": [
+        {
+          "id": "call_5",
+          "name": "get_activity_error",
+          "arguments": {
+            "factory": "contoso-analytics-adf",
+            "run_id": "3f1a9c20-0e51-4a1b-0311-7c1f2d0a0006",
+            "activity": "CopyMarketingEvents"
+          }
+        },
+        {
+          "id": "call_6",
+          "name": "get_activity_error",
+          "arguments": {
+            "factory": "contoso-analytics-adf",
+            "run_id": "3f1a9c20-0e51-4a1b-0311-7c1f2d0a0001",
+            "activity": "CopySalesFromRestApi"
+          }
+        }
+      ]
+    },
+    {
+      "text": "This is two separate incidents that happened to land in the same window.\n\nIncident 1, five runs. Root cause is ingest_sales_raw, activity CopySalesFromRestApi, ErrorCode=RestSourceCallFailed: the vendor POS API returned HTTP 429 and the copy exhausted its retry policy. Nothing landed in ds_sales_landing, so transform_sales_clean failed with DFExecutorUserError, publish_sales_dashboard failed with SqlOperationFailed on a missing curated table, transform_customer_360 failed with DF-Executor-SourceFileNotFound, and ingest_crm_contacts failed at its TriggerCustomer360 activity with error 3001, inner activity failed. Those four are symptoms, not causes.\n\nIncident 2, one run, unrelated. ingest_marketing_events failed in CopyMarketingEvents with ErrorCode=UserErrorInvalidCredential: the client secret for the service principal sp-marketing-ingest has expired. It has no upstream dependencies at all, so it could not have been caused by the sales failure, and it will keep failing every night until the secret is rotated.\n\nNext steps differ by incident. Incident 1 needs a rerun of ingest_sales_raw and then the downstream pipelines in order. Incident 2 needs a credential rotation and will not fix itself.",
+      "stop_reason": "end_turn",
+      "tool_calls": []
+    }
+  ]
+}
